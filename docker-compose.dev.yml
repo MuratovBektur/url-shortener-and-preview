@@ -1,0 +1,31 @@
+name: chem-store_dev
+
+services:
+  server:
+    container_name: "chem-store_server_dev"
+    restart: always
+    build: server
+    expose:
+      - 5000
+    environment:
+      - NODE_ENV=production
+  client:
+    container_name: chem-store_client_dev
+    restart: always
+    build: client # Путь к папке с Nuxt проектом и Dockerfile
+    expose:
+      - 3000
+    environment:
+      - NODE_ENV=production
+  nginx:
+    image: nginx
+    restart: "no"
+    container_name: "chem-store_nginx_dev"
+    ports:
+      - 80:80
+    depends_on:
+      - server
+    volumes:
+      - ./client/dist:/usr/share/nginx/html
+      - /etc/localtime:/etc/localtime:ro
+      - ./nginx/prod:/etc/nginx/conf.d
