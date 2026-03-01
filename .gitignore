@@ -3,4 +3,6 @@ node_modules
 .cache
 .output
 .env
+.notes
+.vscode
 dist

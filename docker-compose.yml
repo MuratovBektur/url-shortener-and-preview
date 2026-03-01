@@ -1,32 +1,62 @@
-name: chem-store_prod
+name: url-shortener-and-preview_prod
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: "url-shortener-and-preview_postgres_prod"
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: url_shortener
+    expose:
+      - 5432
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   server:
-    container_name: "chem-store_server_prod"
+    container_name: "url-shortener-and-preview_server_prod"
     restart: always
     build: server
     expose:
       - 5000
     environment:
       - NODE_ENV=production
-  # Фронтенд (Nuxt 3)
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/url_shortener
+      - PORT=5000
+      - BASE_URL=http://localhost
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   client:
-    container_name: chem-store_client_prod
-    restart: always
-    build: client # Путь к папке с Nuxt проектом и Dockerfile
-    expose:
-      - 3000
-    environment:
-      - NODE_ENV=production
+    container_name: "url-shortener-and-preview_client_prod"
+    restart: "no"
+    build: client
+    volumes:
+      - ./client/dist:/dist
+
   nginx:
     image: nginx
     restart: "no"
-    container_name: "chem-store_nginx_prod"
+    container_name: "url-shortener-and-preview_nginx_prod"
     ports:
       - 80:80
     depends_on:
-      - server
+      client:
+        condition: service_completed_successfully
+      server:
+        condition: service_started
     volumes:
-      - ./client/dist:/usr/share/nginx/html
       - /etc/localtime:/etc/localtime:ro
-      - ./nginx/prod:/etc/nginx/conf.d
+      - ./client/dist:/usr/share/nginx/html
+      - ./nginx/dev:/etc/nginx/conf.d
+
+volumes:
+  postgres_data:

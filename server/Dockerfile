@@ -1,40 +1,38 @@
 # Этап 1: Сборка (Build)
-FROM node:24-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
+# Prisma требует OpenSSL на Alpine Linux
+RUN apk add --no-cache openssl
 
-# Копируем файлы зависимостей
 COPY package*.json ./
 
-# Устанавливаем все зависимости (включая devDependencies для компиляции)
 RUN npm install
 
-# Копируем исходный код
 COPY . .
 
-# Собираем проект (генерирует папку dist)
-RUN npm run build
+# Генерируем Prisma Client и компилируем TypeScript
+RUN npx prisma generate && npm run build
 
 # Этап 2: Продакшен (Production)
-FROM node:24-alpine AS runner
+FROM node:22-alpine AS runner
 
 WORKDIR /app
 
-# Устанавливаем переменную окружения
+RUN apk add --no-cache openssl
+
 ENV NODE_ENV=production
 
-# Копируем только package.json и package-lock.json
 COPY package*.json ./
+COPY prisma ./prisma
 
-# Устанавливаем ТОЛЬКО продакшен-зависимости
-RUN npm install --only=production
+RUN npm install --only=production && npx prisma generate
 
 # Копируем скомпилированный код из этапа builder
 COPY --from=builder /app/dist ./dist
 
-# Безопасность: запускаем приложение от имени не-root пользователя
 USER node
 
-# Команда запуска
-CMD ["node", "dist/main"]
+# Точка входа — dist/index.js (из src/index.ts)
+CMD ["sh", "-c", "npx prisma db push && node dist/index.js"]

@@ -2,10 +2,17 @@ FROM node:24-alpine
 
 WORKDIR /app
 
+# Prisma требует OpenSSL на Alpine Linux
+RUN apk add --no-cache openssl
+
 COPY package*.json ./
 
 RUN npm install
 
 COPY . .
 
-CMD ["npm", "run", "dev"]
+# Генерируем Prisma Client на этапе сборки образа
+RUN npx prisma generate
+
+# При старте контейнера синхронизируем схему с БД и запускаем dev-сервер
+CMD ["sh", "-c", "npx prisma generate && npx prisma db push && npm run dev"]

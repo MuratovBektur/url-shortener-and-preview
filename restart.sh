@@ -1,4 +1,10 @@
 git pull;
+set -e
+
+# Сборка клиента через Docker (Node.js на хосте не нужен)
+cd client;
+source ./build.sh;
+cd ..;
 
 # получем имя докер композера 
 # (либо docker compose либо docker-compose)
